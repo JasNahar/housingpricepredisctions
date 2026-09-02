@@ -28,12 +28,6 @@ Predicts house price from area-level statistics (income, house age, rooms, bedro
 
 Python, pandas, NumPy, scikit-learn, matplotlib, seaborn
 
-## How to Run
-
-```bash
-pip install pandas numpy scikit-learn matplotlib seaborn jupyter joblib
-jupyter notebook House_Price_Linear_Regression.ipynb
-```
 
 ## Next Steps
 

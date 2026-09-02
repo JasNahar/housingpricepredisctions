@@ -29,8 +29,3 @@ Predicts house price from area-level statistics (income, house age, rooms, bedro
 Python, pandas, NumPy, scikit-learn, matplotlib, seaborn
 
 
-## Next Steps
-
-- Try Ridge/Lasso regression and compare
-- Add polynomial features if relationships look non-linear
-- Move to a dataset with categorical features (e.g. Kaggle's Ames Housing) to practice one-hot encoding

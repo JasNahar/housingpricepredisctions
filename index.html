@@ -395,9 +395,16 @@
     bedrooms: 'Number of bedrooms', population: 'Area population'
   };
 
-  const fmtMoney = n => '$' + Math.round(n).toLocaleString('en-US');
-  const fmtInt   = n => Math.round(n).toLocaleString('en-US');
-  const isMoneyField = id => id === 'income' || id === 'population';
+const fmtMoney = n => '$' + Math.round(n).toLocaleString('en-US');
+const fmtInt   = n => Math.round(n).toLocaleString('en-US');
+
+const fieldFormat = {
+  income:     { display: raw => '$' + fmtInt(raw), step: f => Math.max(1, Math.round((f.max - f.min) / 500)) },
+  age:        { display: raw => raw.toFixed(1) + ' yrs', step: () => 0.1 },
+  rooms:      { display: raw => raw.toFixed(2), step: () => 0.1 },
+  bedrooms:   { display: raw => Math.round(raw).toString(), step: () => 1 },
+  population: { display: raw => fmtInt(raw), step: f => Math.max(1, Math.round((f.max - f.min) / 500)) },
+};
 
   let MODEL = null; // populated from /model-info
 
@@ -447,12 +454,14 @@
     container.innerHTML = '';
     MODEL.feature_order.forEach(id => {
       const f = MODEL.features[id];
-      const step = isMoneyField(id) ? Math.max(1, Math.round((f.max - f.min) / 500)) : 0.1;
+      const min = id === 'bedrooms' ? Math.floor(f.min) : f.min;
+      const max = id === 'bedrooms' ? Math.ceil(f.max) : f.max;
+      const step = fieldFormat[id].step(f);
       const field = document.createElement('div');
       field.className = 'field';
       field.innerHTML = `
         <label>${labels[id]} <span class="val" id="v-${id}"></span></label>
-        <input type="range" id="${id}" min="${f.min}" max="${f.max}" step="${step}" value="${f.mean}">
+        <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${id === 'bedrooms' ? Math.round(f.mean) : f.mean}">
       `;
       container.appendChild(field);
     });
@@ -497,8 +506,7 @@
       const f = MODEL.features[id];
       const z = (raw - f.mean) / f.std;
       price += f.coefficient * z;
-      document.getElementById('v-' + id).textContent =
-        isMoneyField(id) ? '$' + fmtInt(raw) : raw.toFixed(2);
+      document.getElementById('v-' + id).textContent = fieldFormat[id].display(raw);
     });
     document.getElementById('prediction').textContent = fmtMoney(Math.max(price, 0));
   }

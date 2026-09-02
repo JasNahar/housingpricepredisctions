@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>House Price Estimator — Multiple Linear Regression</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F2E7;
+    --panel:#FFFDF8;
+    --ink:#16232C;
+    --ink-soft:#4B5A63;
+    --blueprint:#24475F;
+    --brass:#A9803E;
+    --brass-deep:#8A6A30;
+    --line:#D8CFBC;
+    --line-soft:#E7E0D0;
+    --good:#3E6B4F;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{
+    font-family:'Source Serif 4', serif;
+    font-weight:600;
+    margin:0;
+    color:var(--ink);
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  a{color:var(--blueprint);}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 28px;}
+
+  /* header */
+  header{
+    padding:22px 0;
+    border-bottom:1px solid var(--line);
+  }
+  header .wrap{display:flex; justify-content:space-between; align-items:center;}
+  .brand{font-family:'Source Serif 4', serif; font-size:19px; font-weight:600;}
+  .brand span{color:var(--brass-deep);}
+  header nav a{
+    font-size:14px;
+    text-decoration:none;
+    color:var(--ink-soft);
+    border-bottom:1px solid transparent;
+    padding-bottom:2px;
+  }
+  header nav a:hover{border-bottom-color:var(--brass);}
+
+  /* hero */
+  .hero{padding:64px 0 56px;}
+  .hero-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:56px;
+    align-items:start;
+  }
+  .hero h1{
+    font-size:40px;
+    line-height:1.15;
+    max-width:460px;
+  }
+  .hero p.lede{
+    margin-top:18px;
+    max-width:420px;
+    color:var(--ink-soft);
+    font-size:16px;
+  }
+  .dataset-line{
+    margin-top:28px;
+    font-size:13px;
+    color:var(--ink-soft);
+    border-left:2px solid var(--brass);
+    padding-left:12px;
+  }
+  .dataset-line .mono{color:var(--ink);}
+
+  /* calculator panel */
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:28px 28px 24px;
+    position:relative;
+  }
+  .panel::before{
+    content:"";
+    position:absolute;
+    top:10px; left:10px; right:10px; bottom:10px;
+    border:1px solid var(--line-soft);
+    pointer-events:none;
+  }
+  .panel-title{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:20px;
+  }
+  .field{margin-bottom:18px;}
+  .field label{
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+  }
+  .field label .val{
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--ink);
+    font-weight:500;
+  }
+  input[type=range]{
+    width:100%;
+    accent-color:var(--brass);
+    height:4px;
+    background:var(--line);
+  }
+  .estimate{
+    margin-top:26px;
+    padding-top:20px;
+    border-top:1px solid var(--line);
+  }
+  .estimate .label{font-size:13px; color:var(--ink-soft);}
+  .estimate .price{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:38px;
+    font-weight:600;
+    color:var(--brass-deep);
+    margin-top:4px;
+    letter-spacing:-0.5px;
+  }
+  .estimate .range{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:6px;
+  }
+
+  /* sections */
+  section{padding:56px 0; border-top:1px solid var(--line);}
+  .section-head{max-width:560px; margin-bottom:36px;}
+  .section-head h2{font-size:26px;}
+  .section-head p{color:var(--ink-soft); margin-top:10px; font-size:15px;}
+
+  /* impact bars */
+  .impact-row{
+    display:grid;
+    grid-template-columns:200px 1fr 110px;
+    align-items:center;
+    gap:16px;
+    padding:11px 0;
+    border-bottom:1px solid var(--line-soft);
+    font-size:14px;
+  }
+  .impact-row:first-child{border-top:1px solid var(--line-soft);}
+  .impact-track{
+    height:8px;
+    background:var(--line-soft);
+    position:relative;
+  }
+  .impact-fill{
+    height:100%;
+    background:var(--blueprint);
+  }
+  .impact-val{
+    text-align:right;
+    font-family:'IBM Plex Mono', monospace;
+    color:var(--ink-soft);
+    font-size:13px;
+  }
+
+  /* metrics ledger */
+  .ledger{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    border-top:1px solid var(--line);
+    border-left:1px solid var(--line);
+  }
+  .ledger div{
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    padding:22px 24px;
+  }
+  .ledger .k{font-size:13px; color:var(--ink-soft);}
+  .ledger .v{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:26px;
+    margin-top:8px;
+    color:var(--ink);
+  }
+  .ledger .note{font-size:12px; color:var(--ink-soft); margin-top:8px;}
+
+  /* methodology */
+  .method p{color:var(--ink-soft); font-size:15px; max-width:640px;}
+  .method ol{color:var(--ink-soft); font-size:15px; max-width:640px; padding-left:20px;}
+  .method li{margin-bottom:6px;}
+
+  .disclaimer{
+    font-size:13px;
+    color:var(--ink-soft);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-left:3px solid var(--brass);
+    padding:14px 18px;
+    margin-top:28px;
+    max-width:640px;
+  }
+
+  .server-check{
+    margin-top:16px;
+    padding-top:16px;
+    border-top:1px dashed var(--line);
+  }
+  .server-check button{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:13px;
+    color:var(--blueprint);
+    background:none;
+    border:1px solid var(--blueprint);
+    padding:8px 14px;
+    cursor:pointer;
+  }
+  .server-check button:hover{ background:var(--blueprint); color:var(--panel); }
+  .server-check button:disabled{ opacity:0.5; cursor:default; }
+  .server-result{
+    margin-top:10px;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+  .server-result .mono{ color:var(--good); font-size:15px; }
+  .server-result.error .mono{ color:#A3403C; }
+
+  .loading-state{
+    font-size:13px;
+    color:var(--ink-soft);
+    padding:8px 0;
+  }
+  .error-state{
+    font-size:13px;
+    color:#A3403C;
+    background:#FBEEEC;
+    border:1px solid #E3C3BE;
+    padding:12px 14px;
+    margin-top:10px;
+  }
+  .error-state code{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    background:rgba(0,0,0,0.05);
+    padding:1px 5px;
+  }
+  input[type=range]:disabled{ opacity:0.4; }
+
+  footer{
+    padding:32px 0 48px;
+    border-top:1px solid var(--line);
+    font-size:13px;
+    color:var(--ink-soft);
+    display:flex;
+    justify-content:space-between;
+  }
+
+  @media (max-width:800px){
+    .hero-grid{grid-template-columns:1fr;}
+    .impact-row{grid-template-columns:120px 1fr 90px; font-size:13px;}
+    .ledger{grid-template-columns:1fr;}
+    footer{flex-direction:column; gap:8px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand">House Price <span>Estimator</span></div>
+    <nav><a href="#impact">Model insight</a> &nbsp; &nbsp; <a href="#performance">Performance</a> &nbsp; &nbsp; <a href="#method">Methodology</a></nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <h1>What five numbers about a neighbourhood say about a house's price.</h1>
+      <p class="lede">A multiple linear regression model trained on 5,000 U.S. housing records. Adjust the inputs and watch the estimate move — every coefficient below is doing the work, live in your browser.</p>
+      <div class="dataset-line" id="dataset-line">
+        Connecting to the live model…
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Enter area characteristics</div>
+      <div id="calc-loading" class="loading-state">Loading current feature ranges from the model…</div>
+      <div id="calc-error" class="error-state" style="display:none;"></div>
+
+      <div id="fields-container"></div>
+
+      <div class="estimate">
+        <div class="label">Predicted price</div>
+        <div class="price mono" id="prediction">—</div>
+        <div class="range" id="mae-line"></div>
+      </div>
+
+      <div class="server-check">
+        <button id="verify-btn" type="button" disabled>Predict directly on the server</button>
+        <div id="server-result" class="server-result"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="impact">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>What moves the price</h2>
+      <p>Coefficients from the trained model, on standardised features — so a longer bar means that factor swings the price more, independent of its raw units.</p>
+    </div>
+    <div id="impact-list">
+      <div class="loading-state">Waiting for the model…</div>
+    </div>
+  </div>
+</section>
+
+<section id="performance">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Performance on held-out data</h2>
+      <p>Metrics from the test split the model never saw during training — recomputed every time the model is retrained on new data.</p>
+    </div>
+    <div class="ledger" id="ledger">
+      <div>
+        <div class="k">R² score</div>
+        <div class="v" id="metric-r2">—</div>
+        <div class="note" id="metric-r2-note">Waiting for the model…</div>
+      </div>
+      <div>
+        <div class="k">MAE</div>
+        <div class="v" id="metric-mae">—</div>
+        <div class="note">Average dollar error, in plain terms</div>
+      </div>
+      <div>
+        <div class="k">RMSE</div>
+        <div class="v" id="metric-rmse">—</div>
+        <div class="note">Penalises larger misses more heavily</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="method" class="method">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>How this was built</h2>
+      <p>The short version of the notebook this page is based on.</p>
+    </div>
+    <ol>
+      <li>Cleaned the USA Housing dataset and dropped the free-text address column.</li>
+      <li>Checked feature–price relationships with scatterplots and a correlation heatmap before modelling.</li>
+      <li>Split 80/20 into train and test sets, then standardised all five features with <span class="mono">StandardScaler</span>.</li>
+      <li>Fit a multiple linear regression model and validated its assumptions — linearity, homoscedasticity, normal residuals, independence, and low multicollinearity (via VIF).</li>
+      <li>Checked the residual plots after fitting: roughly bell-shaped and centred at zero, with no funnel pattern — confirming linear regression was a reasonable choice for this data.</li>
+    </ol>
+    <div class="disclaimer">
+      This page doesn't hardcode any coefficients. On load, it asks a live Flask API to retrain on the current <span class="mono">USA_Housing.csv</span> and report back the coefficients, ranges, and metrics — so replacing the CSV and restarting the API is the only step needed to update everything here. The underlying dataset is a synthetic teaching dataset built from realistic U.S. housing statistics, so estimates are illustrative and not a real appraisal tool.
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="display:flex; justify-content:space-between; width:100%;">
+    <div>Built by Jas Nahar</div>
+    <div><a href="https://github.com/JasNahar">github.com/JasNahar</a></div>
+  </div>
+</footer>
+
+<script>
+  // Point this at your deployed Flask API's base URL (e.g. Render, Railway).
+  // Everything else on this page — sliders, coefficients, metrics — is fetched
+  // from /model-info, so changing USA_Housing.csv on the server and restarting
+  // it is the only step needed to update this website.
+  const API_BASE_URL = "";
+
+  const labels = {
+    income: 'Average area income', age: 'Average house age', rooms: 'Average number of rooms',
+    bedrooms: 'Average number of bedrooms', population: 'Area population'
+  };
+  const shortLabels = {
+    income: 'Area income', age: 'House age', rooms: 'Number of rooms',
+    bedrooms: 'Number of bedrooms', population: 'Area population'
+  };
+
+  const fmtMoney = n => '$' + Math.round(n).toLocaleString('en-US');
+  const fmtInt   = n => Math.round(n).toLocaleString('en-US');
+  const isMoneyField = id => id === 'income' || id === 'population';
+
+  let MODEL = null; // populated from /model-info
+
+  function apiUrl(path){
+    return API_BASE_URL.replace(/\/$/, '') + path;
+  }
+
+  function showCalcError(message){
+    document.getElementById('calc-loading').style.display = 'none';
+    const err = document.getElementById('calc-error');
+    err.style.display = 'block';
+    err.innerHTML = message;
+  }
+
+  async function loadModel(){
+    if(!API_BASE_URL){
+      showCalcError('No API connected yet. Deploy the Flask backend (see README), then set <code>API_BASE_URL</code> near the top of this file\'s script.');
+      document.getElementById('dataset-line').textContent = 'Not connected to a live model yet.';
+      return;
+    }
+    try{
+      const res = await fetch(apiUrl('/model-info'));
+      if(!res.ok) throw new Error('bad response');
+      MODEL = await res.json();
+      buildFields();
+      buildImpactList();
+      buildLedger();
+      buildDatasetLine();
+      document.getElementById('calc-loading').style.display = 'none';
+      document.getElementById('verify-btn').disabled = false;
+      predict();
+    }catch(err){
+      showCalcError(`Could not reach the model API at <code>${API_BASE_URL}</code>. Check the URL and that the backend is running.`);
+      document.getElementById('dataset-line').textContent = 'Not connected to a live model.';
+    }
+  }
+
+  function buildDatasetLine(){
+    const m = MODEL.metrics;
+    document.getElementById('dataset-line').innerHTML =
+      `Retrained on <span class="mono">${fmtInt(m.n_train + m.n_test)}</span> records · <span class="mono">${MODEL.feature_order.length}</span> features · R² of <span class="mono">${m.r2}</span> on held-out test data`;
+    document.getElementById('mae-line').textContent = `Typical model error on unseen data: ± ${fmtMoney(m.mae)} (MAE)`;
+  }
+
+  function buildFields(){
+    const container = document.getElementById('fields-container');
+    container.innerHTML = '';
+    MODEL.feature_order.forEach(id => {
+      const f = MODEL.features[id];
+      const step = isMoneyField(id) ? Math.max(1, Math.round((f.max - f.min) / 500)) : 0.1;
+      const field = document.createElement('div');
+      field.className = 'field';
+      field.innerHTML = `
+        <label>${labels[id]} <span class="val" id="v-${id}"></span></label>
+        <input type="range" id="${id}" min="${f.min}" max="${f.max}" step="${step}" value="${f.mean}">
+      `;
+      container.appendChild(field);
+    });
+    MODEL.feature_order.forEach(id => document.getElementById(id).addEventListener('input', predict));
+  }
+
+  function buildImpactList(){
+    const list = document.getElementById('impact-list');
+    list.innerHTML = '';
+    const ordered = [...MODEL.feature_order].sort(
+      (a, b) => Math.abs(MODEL.features[b].coefficient) - Math.abs(MODEL.features[a].coefficient)
+    );
+    const maxCoef = Math.max(...ordered.map(id => Math.abs(MODEL.features[id].coefficient)));
+    ordered.forEach(id => {
+      const coef = MODEL.features[id].coefficient;
+      const pct = (Math.abs(coef) / maxCoef) * 100;
+      const row = document.createElement('div');
+      row.className = 'impact-row';
+      row.innerHTML = `
+        <div>${shortLabels[id]}</div>
+        <div class="impact-track"><div class="impact-fill" style="width:${pct}%"></div></div>
+        <div class="impact-val">$${fmtInt(coef)}</div>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  function buildLedger(){
+    const m = MODEL.metrics;
+    document.getElementById('metric-r2').textContent = m.r2;
+    document.getElementById('metric-r2-note').textContent =
+      `${Math.round(m.r2 * 100)}% of price variation explained by the ${MODEL.feature_order.length} features`;
+    document.getElementById('metric-mae').textContent = fmtMoney(m.mae);
+    document.getElementById('metric-rmse').textContent = fmtMoney(m.rmse);
+  }
+
+  function predict(){
+    if(!MODEL) return;
+    let price = MODEL.intercept;
+    MODEL.feature_order.forEach(id => {
+      const raw = parseFloat(document.getElementById(id).value);
+      const f = MODEL.features[id];
+      const z = (raw - f.mean) / f.std;
+      price += f.coefficient * z;
+      document.getElementById('v-' + id).textContent =
+        isMoneyField(id) ? '$' + fmtInt(raw) : raw.toFixed(2);
+    });
+    document.getElementById('prediction').textContent = fmtMoney(Math.max(price, 0));
+  }
+
+  // Server round-trip: calls /predict directly, so it reflects the exact
+  // server-side model rather than the client-side re-implementation above.
+  const verifyBtn = document.getElementById('verify-btn');
+  const resultBox = document.getElementById('server-result');
+
+  verifyBtn.addEventListener('click', async () => {
+    if(!MODEL) return;
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = 'Checking…';
+    resultBox.className = 'server-result';
+    resultBox.textContent = '';
+
+    const payload = {};
+    MODEL.feature_order.forEach(id => payload[id] = parseFloat(document.getElementById(id).value));
+
+    try{
+      const res = await fetch(apiUrl('/predict'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if(!res.ok) throw new Error('Server responded with an error.');
+      const data = await res.json();
+      resultBox.innerHTML = `Server: <span class="mono">${fmtMoney(data.predicted_price)}</span>`;
+    }catch(err){
+      resultBox.className = 'server-result error';
+      resultBox.textContent = 'Could not reach the API — check the URL and that the backend is running.';
+    }finally{
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = 'Predict directly on the server';
+    }
+  });
+
+  loadModel();
+</script>
+
+</body>
+</html>

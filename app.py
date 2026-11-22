@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
@@ -81,6 +81,11 @@ STATE = train_model()
 
 
 @app.get("/")
+def homepage():
+    return send_from_directory(app.root_path, "index.html")
+
+
+@app.get("/health")
 def health():
     return jsonify({"status": "ok", "trained_rows": STATE["trained_rows"]})
 
